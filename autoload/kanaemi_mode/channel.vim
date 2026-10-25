@@ -5,16 +5,16 @@
 " and on_close() is called once when the other side ends it, never after
 " close().
 
-function! kanaemi#channel#open(address, timeout, on_line, on_close) abort
+function! kanaemi_mode#channel#open(address, timeout, on_line, on_close) abort
   return has('nvim')
-        \ ? kanaemi#channel#nvim#open(a:address, a:on_line, a:on_close)
-        \ : kanaemi#channel#vim#open(a:address, a:timeout, a:on_line, a:on_close)
+        \ ? kanaemi_mode#channel#nvim#open(a:address, a:on_line, a:on_close)
+        \ : kanaemi_mode#channel#vim#open(a:address, a:timeout, a:on_line, a:on_close)
 endfunction
 
 " Waits until a:cond() holds or a:timeout milliseconds pass, taking lines
 " meanwhile.
-function! kanaemi#channel#wait(timeout, cond) abort
+function! kanaemi_mode#channel#wait(timeout, cond) abort
   return has('nvim')
-        \ ? kanaemi#channel#nvim#wait(a:timeout, a:cond)
-        \ : kanaemi#channel#vim#wait(a:timeout, a:cond)
+        \ ? kanaemi_mode#channel#nvim#wait(a:timeout, a:cond)
+        \ : kanaemi_mode#channel#vim#wait(a:timeout, a:cond)
 endfunction

@@ -19,7 +19,7 @@ run() {
   read -r port admin <"$portfile"
   rm -f "$portfile"
   echo "== $name"
-  KANAEMI_TEST_PORT=$port KANAEMI_TEST_ADMIN=$admin "$@" || status=1
+  KANAEMI_MODE_TEST_PORT=$port KANAEMI_MODE_TEST_ADMIN=$admin "$@" || status=1
   kill "$server"
 }
 

@@ -1,9 +1,9 @@
 " Runs every s:test_* against tests/fake_server.py, whose ports come in
-" $KANAEMI_TEST_PORT and $KANAEMI_TEST_ADMIN. Exits non-zero on a failure.
+" $KANAEMI_MODE_TEST_PORT and $KANAEMI_MODE_TEST_ADMIN. Exits non-zero on a failure.
 
 let s:root = expand('<sfile>:p:h:h')
-let s:port = str2nr($KANAEMI_TEST_PORT)
-let s:admin = $KANAEMI_TEST_ADMIN
+let s:port = str2nr($KANAEMI_MODE_TEST_PORT)
+let s:admin = $KANAEMI_MODE_TEST_ADMIN
 execute 'set runtimepath^=' .. fnameescape(s:root)
 
 function! s:admin(command) abort
@@ -37,8 +37,8 @@ function! s:settle() abort
 endfunction
 
 function! s:setup() abort
-  let g:kanaemi_port = s:port
-  unlet! g:kanaemi_reconnect_interval
+  let g:kanaemi_mode_port = s:port
+  unlet! g:kanaemi_mode_reconnect_interval
   call s:admin('focus')
   call s:admin('user kana')
   " The change above is told to a connection still watching; it belongs to
@@ -47,46 +47,46 @@ function! s:setup() abort
 endfunction
 
 function! s:test_get_mode_answers_the_mode_of_the_field() abort
-  call assert_equal('kana', kanaemi#get_mode())
+  call assert_equal('kana', kanaemi_mode#get_mode())
   call s:admin('user abc')
-  call assert_equal('abc', kanaemi#get_mode())
+  call assert_equal('abc', kanaemi_mode#get_mode())
 endfunction
 
 function! s:test_set_mode_changes_the_mode_and_answers_it() abort
-  call assert_equal('abc', kanaemi#set_mode('abc'))
-  call assert_equal('abc', kanaemi#get_mode())
-  call assert_equal('kana', kanaemi#set_mode('kana'))
+  call assert_equal('abc', kanaemi_mode#set_mode('abc'))
+  call assert_equal('abc', kanaemi_mode#get_mode())
+  call assert_equal('kana', kanaemi_mode#set_mode('kana'))
 endfunction
 
 function! s:test_set_mode_refuses_an_unknown_mode() abort
-  call s:assert_throws("call kanaemi#set_mode('hira')", 'kanaemi: mode is kana or abc')
+  call s:assert_throws("call kanaemi_mode#set_mode('hira')", 'kanaemi_mode: mode is kana or abc')
 endfunction
 
 function! s:test_without_a_focused_field_requests_fail() abort
   call s:admin('blur')
-  call s:assert_throws('call kanaemi#get_mode()', 'kanaemi: no-field')
-  call s:assert_throws("call kanaemi#set_mode('abc')", 'kanaemi: no-field')
+  call s:assert_throws('call kanaemi_mode#get_mode()', 'kanaemi_mode: no-field')
+  call s:assert_throws("call kanaemi_mode#set_mode('abc')", 'kanaemi_mode: no-field')
 endfunction
 
 function! s:test_without_a_port_requests_fail() abort
-  unlet g:kanaemi_port
-  call s:assert_throws('call kanaemi#get_mode()', 'kanaemi: g:kanaemi_port')
+  unlet g:kanaemi_mode_port
+  call s:assert_throws('call kanaemi_mode#get_mode()', 'kanaemi_mode: g:kanaemi_mode_port')
 endfunction
 
 function! s:test_without_the_ime_listening_requests_fail() abort
-  let g:kanaemi_port = 1
-  call s:assert_throws('call kanaemi#get_mode()', 'kanaemi: cannot connect')
+  let g:kanaemi_mode_port = 1
+  call s:assert_throws('call kanaemi_mode#get_mode()', 'kanaemi_mode: cannot connect')
 endfunction
 
 function! s:test_watch_mode_tells_each_change() abort
   let told = []
-  let Unwatch = kanaemi#watch_mode({ mode -> add(told, mode) })
+  let Unwatch = kanaemi_mode#watch_mode({ mode -> add(told, mode) })
   try
     call s:settle()
     call assert_equal([], told, 'the mode at the start is no change')
     call s:admin('user abc')
     call s:wait_until({ -> len(told) >= 1 })
-    call kanaemi#set_mode('kana')
+    call kanaemi_mode#set_mode('kana')
     call s:wait_until({ -> len(told) >= 2 })
     call s:admin('blur')
     call s:wait_until({ -> len(told) >= 3 })
@@ -100,8 +100,8 @@ endfunction
 function! s:test_unwatch_stops_telling() abort
   let first = []
   let second = []
-  let Unwatch = kanaemi#watch_mode({ mode -> add(first, mode) })
-  let Keep = kanaemi#watch_mode({ mode -> add(second, mode) })
+  let Unwatch = kanaemi_mode#watch_mode({ mode -> add(first, mode) })
+  let Keep = kanaemi_mode#watch_mode({ mode -> add(second, mode) })
   try
     call Unwatch()
     call s:admin('user abc')
@@ -116,8 +116,8 @@ endfunction
 
 function! s:test_a_failing_watcher_does_not_stop_the_others() abort
   let told = []
-  let Broken = kanaemi#watch_mode({ mode -> execute('throw "broken"') })
-  let Unwatch = kanaemi#watch_mode({ mode -> add(told, mode) })
+  let Broken = kanaemi_mode#watch_mode({ mode -> execute('throw "broken"') })
+  let Unwatch = kanaemi_mode#watch_mode({ mode -> add(told, mode) })
   try
     silent! call s:admin('user abc')
     call s:wait_until({ -> len(told) >= 1 })
@@ -129,9 +129,9 @@ function! s:test_a_failing_watcher_does_not_stop_the_others() abort
 endfunction
 
 function! s:test_watch_mode_comes_back_after_the_connection_ends() abort
-  let g:kanaemi_reconnect_interval = 100
+  let g:kanaemi_mode_reconnect_interval = 100
   let told = []
-  let Unwatch = kanaemi#watch_mode({ mode -> add(told, mode) })
+  let Unwatch = kanaemi_mode#watch_mode({ mode -> add(told, mode) })
   try
     call s:settle()
     call s:admin('close')
@@ -142,7 +142,7 @@ function! s:test_watch_mode_comes_back_after_the_connection_ends() abort
     call s:admin('user abc')
     call s:wait_until({ -> len(told) >= 3 })
     call assert_equal([v:null, 'kana', 'abc'], told)
-    call assert_equal('abc', kanaemi#get_mode())
+    call assert_equal('abc', kanaemi_mode#get_mode())
   finally
     call Unwatch()
   endtry
@@ -150,13 +150,13 @@ endfunction
 
 function! s:test_watch_mode_follows_a_new_port() abort
   let told = []
-  let Unwatch = kanaemi#watch_mode({ mode -> add(told, mode) })
+  let Unwatch = kanaemi_mode#watch_mode({ mode -> add(told, mode) })
   try
     call s:settle()
-    let g:kanaemi_port = 1
-    call s:assert_throws('call kanaemi#get_mode()', 'kanaemi: cannot connect')
-    let g:kanaemi_port = s:port
-    call assert_equal('kana', kanaemi#get_mode())
+    let g:kanaemi_mode_port = 1
+    call s:assert_throws('call kanaemi_mode#get_mode()', 'kanaemi_mode: cannot connect')
+    let g:kanaemi_mode_port = s:port
+    call assert_equal('kana', kanaemi_mode#get_mode())
     call s:admin('user abc')
     call s:wait_until({ -> len(told) >= 3 })
     call s:settle()
@@ -167,10 +167,10 @@ function! s:test_watch_mode_follows_a_new_port() abort
 endfunction
 
 function! s:test_requests_connect_again_after_the_connection_ends() abort
-  call assert_equal('kana', kanaemi#get_mode())
+  call assert_equal('kana', kanaemi_mode#get_mode())
   call s:admin('close')
   call s:settle()
-  call assert_equal('kana', kanaemi#get_mode())
+  call assert_equal('kana', kanaemi_mode#get_mode())
 endfunction
 
 function! s:run() abort

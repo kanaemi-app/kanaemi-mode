@@ -1,4 +1,4 @@
-function! kanaemi#channel#vim#open(address, timeout, on_line, on_close) abort
+function! kanaemi_mode#channel#vim#open(address, timeout, on_line, on_close) abort
   let state = {'closed': 0}
   let handle = ch_open(a:address, {
         \ 'mode': 'nl',
@@ -7,7 +7,7 @@ function! kanaemi#channel#vim#open(address, timeout, on_line, on_close) abort
         \ 'close_cb': function('s:on_close', [state, a:on_close]),
         \})
   if ch_status(handle) !=# 'open'
-    throw printf('kanaemi: cannot connect to %s', a:address)
+    throw printf('kanaemi_mode: cannot connect to %s', a:address)
   endif
   return {
         \ 'send': function('s:send', [handle]),
@@ -15,7 +15,7 @@ function! kanaemi#channel#vim#open(address, timeout, on_line, on_close) abort
         \}
 endfunction
 
-function! kanaemi#channel#vim#wait(timeout, cond) abort
+function! kanaemi_mode#channel#vim#wait(timeout, cond) abort
   " Vim takes channel lines while it sleeps.
   let start = reltime()
   let timeout = a:timeout / 1000.0

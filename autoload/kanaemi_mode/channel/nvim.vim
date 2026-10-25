@@ -1,10 +1,10 @@
-function! kanaemi#channel#nvim#open(address, on_line, on_close) abort
+function! kanaemi_mode#channel#nvim#open(address, on_line, on_close) abort
   " Neovim hands over data in chunks; the part after the last LF waits in
   " 'pending' for the rest of its line.
   let state = {'pending': '', 'closed': 0, 'on_line': a:on_line, 'on_close': a:on_close}
   let id = sockconnect('tcp', a:address, {'on_data': function('s:on_data', [state])})
   if id <= 0
-    throw printf('kanaemi: cannot connect to %s', a:address)
+    throw printf('kanaemi_mode: cannot connect to %s', a:address)
   endif
   return {
         \ 'send': function('s:send', [id]),
@@ -12,7 +12,7 @@ function! kanaemi#channel#nvim#open(address, on_line, on_close) abort
         \}
 endfunction
 
-function! kanaemi#channel#nvim#wait(timeout, cond) abort
+function! kanaemi_mode#channel#nvim#wait(timeout, cond) abort
   call wait(a:timeout, a:cond, 1)
 endfunction
 

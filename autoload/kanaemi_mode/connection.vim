@@ -1,7 +1,7 @@
 " The one connection to the control port that every call shares.
 "
 " Requests carry an id and wait for the answer with the same id; lines
-" without one are about watching, and go to kanaemi#watcher.
+" without one are about watching, and go to kanaemi_mode#watcher.
 
 let s:host = '127.0.0.1'
 
@@ -18,28 +18,28 @@ let s:watching = 0
 let s:retry = -1
 
 " Sends a:message and returns the answer, throwing the error it tells.
-function! kanaemi#connection#request(message) abort
+function! kanaemi_mode#connection#request(message) abort
   call s:connect()
   let s:next_request += 1
   let id = s:next_request
   let generation = s:generation
   call s:channel.send(extend({'id': id}, a:message))
-  call kanaemi#channel#wait(s:timeout(),
+  call kanaemi_mode#channel#wait(s:timeout(),
         \ { -> has_key(s:answers, id) || s:generation != generation || s:channel is# v:null })
   if !has_key(s:answers, id)
     throw s:generation == generation && s:channel isnot# v:null
-          \ ? 'kanaemi: no answer from the IME'
-          \ : 'kanaemi: the connection to the IME ended'
+          \ ? 'kanaemi_mode: no answer from the IME'
+          \ : 'kanaemi_mode: the connection to the IME ended'
   endif
   let answer = remove(s:answers, id)
   if has_key(answer, 'error')
-    throw printf('kanaemi: %s: %s', answer.error, get(answer, 'message', ''))
+    throw printf('kanaemi_mode: %s: %s', answer.error, get(answer, 'message', ''))
   endif
   return answer
 endfunction
 
 " Asks for changes, on this channel and on every one opened after it.
-function! kanaemi#connection#watch() abort
+function! kanaemi_mode#connection#watch() abort
   let s:wants_watch = 1
   call s:connect()
   call s:ask_changes()
@@ -47,15 +47,15 @@ endfunction
 
 " Stops asking for changes on channels opened from now on. The open one
 " goes on telling them, as the IME has no way to stop it.
-function! kanaemi#connection#unwatch() abort
+function! kanaemi_mode#connection#unwatch() abort
   let s:wants_watch = 0
   call s:stop_retry()
 endfunction
 
 function! s:connect() abort
-  let port = get(g:, 'kanaemi_port', v:null)
+  let port = get(g:, 'kanaemi_mode_port', v:null)
   if type(port) != v:t_number
-    throw 'kanaemi: g:kanaemi_port is not set; set it to the port in the [control] section of the Kanaemi settings'
+    throw 'kanaemi_mode: g:kanaemi_mode_port is not set; set it to the port in the [control] section of the Kanaemi settings'
   endif
   if s:channel isnot# v:null
     if s:channel.port == port
@@ -67,13 +67,13 @@ function! s:connect() abort
   let address = printf('%s:%d', s:host, port)
   let s:generation += 1
   try
-    let channel = kanaemi#channel#open(address, s:timeout(),
+    let channel = kanaemi_mode#channel#open(address, s:timeout(),
           \ function('s:on_line', [s:generation]),
           \ function('s:on_close', [s:generation]))
-  catch /^kanaemi:/
+  catch /^kanaemi_mode:/
     throw v:exception
   catch
-    throw printf('kanaemi: cannot connect to %s: %s', address, v:exception)
+    throw printf('kanaemi_mode: cannot connect to %s: %s', address, v:exception)
   endtry
   let s:channel = extend(channel, {'port': port})
   let s:watching = 0
@@ -93,11 +93,11 @@ endfunction
 function! s:lost() abort
   let s:channel = v:null
   let s:watching = 0
-  call kanaemi#watcher#lost()
+  call kanaemi_mode#watcher#lost()
 endfunction
 
 function! s:timeout() abort
-  return get(g:, 'kanaemi_timeout', 1000)
+  return get(g:, 'kanaemi_mode_timeout', 1000)
 endfunction
 
 function! s:on_line(generation, line) abort
@@ -115,9 +115,9 @@ function! s:on_line(generation, line) abort
   if has_key(message, 'id')
     let s:answers[message.id] = message
   elseif get(message, 'event', '') ==# 'mode'
-    call kanaemi#watcher#tell(get(message, 'mode', v:null))
+    call kanaemi_mode#watcher#tell(get(message, 'mode', v:null))
   elseif has_key(message, 'mode')
-    call kanaemi#watcher#start(message.mode)
+    call kanaemi_mode#watcher#start(message.mode)
   endif
 endfunction
 
@@ -134,7 +134,7 @@ endfunction
 function! s:start_retry() abort
   if s:retry == -1
     let s:retry = timer_start(
-          \ get(g:, 'kanaemi_reconnect_interval', 5000),
+          \ get(g:, 'kanaemi_mode_reconnect_interval', 5000),
           \ function('s:on_retry'),
           \ {'repeat': -1})
   endif
@@ -151,6 +151,6 @@ function! s:on_retry(timer) abort
   try
     call s:connect()
     call s:stop_retry()
-  catch /^kanaemi:/
+  catch /^kanaemi_mode:/
   endtry
 endfunction
